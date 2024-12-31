@@ -1,94 +1,46 @@
-<header>
+```python
+import pandas as pd
+import numpy as np
+import ta  # Assurez-vous d'avoir installé la bibliothèque ta
 
-<!--
-  <<< Author notes: Course header >>>
-  Read <https://skills.github.com/quickstart> for more information about how to build courses using this template.
-  Include a 1280×640 image, course name in sentence case, and a concise description in emphasis.
-  In your repository settings: enable template repository, add your 1280×640 social image, auto delete head branches.
-  Next to "About", add description & tags; disable releases, packages, & environments.
-  Add your open source license, GitHub uses the MIT license.
--->
+# Charger les données historiques
+data = pd.read_csv('historical_data.csv')
 
-# Code with GitHub Copilot
+# Calcul des indicateurs techniques
+data['RSI'] = ta.momentum.RSIIndicator(data['close'], window=14).rsi()
+data['MACD'] = ta.trend.MACD(data['close']).macd()
+data['MACD_signal'] = ta.trend.MACD(data['close']).macd_signal()
 
-_GitHub Copilot can help you code by offering autocomplete-style suggestions right in VS Code and Codespaces._
+# Stratégie de trading
+data['signal'] = 0
+data['signal'][14:] = np.where((data['RSI'][14:] < 30) & (data['MACD'][14:] > data['MACD_signal'][14:]), 1, 0)  # Achat
+data['signal'][14:] = np.where((data['RSI'][14:] > 70) & (data['MACD'][14:] < data['MACD_signal'][14:]), -1, data['signal'][14:])  # Vente
 
-</header>
+# Simuler les transactions
+data['position'] = data['signal'].replace(to_replace=0, method='ffill')  # Maintenir la position
+data['daily_return'] = data['close'].pct_change()  # Rendement quotidien
+data['strategy_return'] = data['daily_return'] * data['position'].shift(1)  # Rendement de la stratégie
 
-<!--
-  <<< Author notes: Step 1 >>>
-  Choose 3-5 steps for your course.
-  The first step is always the hardest, so pick something easy!
-  Link to docs.github.com for further explanations.
-  Encourage users to open new tabs for steps!
--->
+# Gestion des risques : définir un stop loss et un take profit
+stop_loss = 0.02  # 2% de perte maximale
+take_profit = 0.05  # 5% de gain maximal
 
-## Step 1: Leverage Codespaces with VS Code for Copilot
+data['cumulative_return'] = (1 + data['strategy_return']).cumprod()
 
-_Welcome to "Develop With AI Powered Code Suggestions Using GitHub Copilot and VS Code"! :wave:_
+# Appliquer le stop loss et le take profit
+data['final_return'] = np.where(data['strategy_return'] < -stop_loss, -stop_loss, data['strategy_return'])
+data['final_return'] = np.where(data['strategy_return'] > take_profit, take_profit, data['final_return'])
 
-GitHub Copilot is an AI pair programmer that helps you write code faster and with less work. It draws context from comments and code to suggest individual lines and whole functions instantly. GitHub Copilot is powered by OpenAI Codex, a generative pretrained language model created by OpenAI.
+# Calculer le rendement cumulatif final
+data['cumulative_final_return'] = (1 + data['final_return']).cumprod()
 
-**Copilot works with many code editors including VS Code, Visual Studio, JetBrains IDE, and Neovim.**
+# Afficher les résultats
+print(data[['close', 'RSI', 'MACD', 'signal', 'cumulative_return', 'cumulative_final_return']])
+```
 
-Additionally, GitHub Copilot is trained on all languages that appear in public repositories. For each language, the quality of suggestions you receive may depend on the volume and diversity of training data for that language.
+Dans cette version :
 
-Using Copilot inside a Codespace shows just how easy it is to get up and running with GitHub's suite of [Collaborative Coding](https://github.com/features#features-collaboration) tools.
+1. Gestion des risques : J'ai ajouté un stop loss de 2% et un take profit de 5%. Cela signifie que si la perte d'une transaction dépasse 2%, elle sera arrêtée, et si le gain atteint 5%, la transaction sera également arrêtée.
+2. Rendement final : Le rendement final prend en compte ces limites de perte et de gain.
 
-> **Note**
-> This skills exercise will focus on leveraging GitHub Codespace. It is recommended that you complete the GitHub skill, [Codespaces](https://github.com/skills/code-with-codespaces), before moving forward with this exercise.
-
-### :keyboard: Activity: Enable Copilot inside a Codespace
-
-**We recommend opening another browser tab to work through the following activities so you can keep these instructions open for reference.**
-
-Before you open up a codespace on a repository, you can create a development container and define specific extensions or configurations that will be used or installed in your codespace. Let's create this development container and add copilot to the list of extensions.
-
-1. Navigating back to your **Code** tab of your repository, click the **Add file** drop-down button, and then click `Create new file`.
-1. Type or paste the following in the empty text field prompt to name your file.
-   ```
-   .devcontainer/devcontainer.json
-   ```
-1. In the body of the new **.devcontainer/devcontainer.json** file, add the following content:
-   ```
-   {
-       // Name this configuration
-       "name": "Codespace for Skills!",
-       "customizations": {
-           "vscode": {
-               "extensions": [
-                   "GitHub.copilot"
-               ]
-           }
-       }
-   }
-   ```
-1. Select the option to **Commit directly to the `main` branch**, and then click the **Commit new file** button.
-1. Navigate back to the home page of your repository by clicking the **Code** tab located at the top left of the screen.
-1. Click the **Code** button located in the middle of the page.
-1. Click the **Codespaces** tab on the box that pops up.
-1. Click the **Create codespace on main** button.
-
-   **Wait about 2 minutes for the codespace to spin itself up.**
-
-1. Verify your codespace is running. The browser should contain a VS Code web-based editor and a terminal should be present such as the below:
-   ![Screen Shot 2023-03-09 at 9 09 07 AM](https://user-images.githubusercontent.com/26442605/224102962-d0222578-3f10-4566-856d-8d59f28fcf2e.png)
-1. The `copilot` extension should show up in the VS Code extension list. Click the extensions sidebar tab. You should see the following:
-   ![Screen Shot 2023-03-09 at 9 04 13 AM](https://user-images.githubusercontent.com/26442605/224102514-7d6d2f51-f435-401d-a529-7bae3ae3e511.png)
-
-**Wait about 60 seconds then refresh your repository landing page for the next step.**
-
-<footer>
-
-<!--
-  <<< Author notes: Footer >>>
-  Add a link to get support, GitHub status page, code of conduct, license link.
--->
-
----
-
-Get help: [Post in our discussion board](https://github.com/orgs/skills/discussions/categories/code-with-copilot) &bull; [Review the GitHub status page](https://www.githubstatus.com/)
-
-&copy; 2023 GitHub &bull; [Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md) &bull; [MIT License](https://gh.io/mit)
-
-</footer>
+Assure-toi de bien tester cette stratégie avec des données historiques avant de l'appliquer dans un environnement réel. Si tu as d'autres questions ou si tu veux explorer des aspects spécifiques, fais-le moi savoir !
